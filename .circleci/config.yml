@@ -1,0 +1,53 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.2
+  heroku: circleci/heroku@1.2.6 # Use the Heroku orb in your config
+  
+
+jobs:
+  build:
+    working_directory: ~/circleci-python
+    docker:
+      - image: "circleci/python:3.6.4"
+    steps:
+      - checkout
+      - run: ls
+      - run: python -m pip install --user -r requirements.txt
+      - run: python3 image_scraper.py
+      - run: python3 api.py
+      - run: python3 User.py
+  test:
+    working_directory: ~/circleci-python
+    docker:
+      - image: "circleci/python:3.6.4"
+    steps:
+      - checkout
+      - run: python -m pip install --user -r requirements.txt
+      - run: cd tests | python -m pytest -v
+
+  deploy:
+    executor: heroku/default
+    steps:
+      - checkout
+      - heroku/install
+      - run: ls -a
+      - heroku/deploy-via-git
+
+
+
+
+
+workflows:
+  build_and_test_and_deploy:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master # only run deploy-via-git job on master branch
